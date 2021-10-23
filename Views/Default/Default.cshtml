@@ -1,0 +1,277 @@
+﻿@{
+    Page.Title = "Inicio";
+
+    Layout = "~/_SiteLayout.cshtml";
+
+    string pStrTipoUsuarioCadena = "aIfgKdBOWjKOYyETsCWCrw";//Encriptado.EncriptarDatos("pIdTipoUsuario");
+    string pStrCveBusquedaCadena = Encriptado.EncriptarDatos("pCveBusqueda");
+    string pStrIdTipoUsuarioEncriptado = "0";
+    pStrIdTipoUsuarioEncriptado = Request.QueryString[pStrTipoUsuarioCadena]?.ToString() ?? "0";
+    int pIdCategoria = int.Parse(Request.QueryString["pIdCategoria"]?.ToString() ?? "0");
+    string pCveBusqueda = Request.QueryString["pCveBusqueda"]?.ToString() ?? "";
+    string pEstados = Request.QueryString["pEstados"]?.ToString() ?? "";
+    int pIntIdUsuario = VariableGlobal.SessionIntTipoUsuario;
+    if (pStrIdTipoUsuarioEncriptado != "0")
+    {
+        pStrIdTipoUsuarioEncriptado = pStrIdTipoUsuarioEncriptado.Replace(" ", "+");
+        pIntIdUsuario = int.Parse(Encriptado.DesencriptarDatos(pStrIdTipoUsuarioEncriptado));
+        HttpContext.Current.Session["IntTipoUsuario"] = pIntIdUsuario;
+    }
+
+    ObjetoBusqueda objetoBusqueda = new ObjetoBusqueda();
+    objetoBusqueda.IntId2 = pIdCategoria;
+    objetoBusqueda.StrDes1 = pCveBusqueda;
+    objetoBusqueda.StrDes2 = pEstados;
+    objetoBusqueda.IntEjecuta = 1;
+    var lstObjPublicacion = new Publicacion().ObtenerListaGenerica(objetoBusqueda);
+
+}
+@functions {
+    public string ObtenerTiempoHace(DateTime paramFecha)
+    {
+        const int SECOND = 1;
+        const int MINUTE = 60 * SECOND;
+        const int HOUR = 60 * MINUTE;
+        const int DAY = 24 * HOUR;
+        const int MONTH = 30 * DAY;
+
+        var ts = new TimeSpan(DateTime.Now.Ticks - paramFecha.Ticks);
+        double delta = Math.Abs(ts.TotalSeconds);
+
+        if (delta < 1 * MINUTE)
+            return ts.Seconds == 1 ? "Hace un segundo" : "Hace " + ts.Seconds + " segundos";
+
+        if (delta < 2 * MINUTE)
+            return "Hace un minuto";
+
+        if (delta < 45 * MINUTE)
+            return "Hace " + ts.Minutes + " minutos";
+
+        if (delta < 90 * MINUTE)
+            return "Hace una hora";
+
+        if (delta < 24 * HOUR)
+            return "Hace " + ts.Hours + " horas";
+
+        if (delta < 48 * HOUR)
+            return "Ayer";
+
+        if (delta < 30 * DAY)
+            return "Hace " + ts.Days + " días";
+
+        if (delta < 12 * MONTH)
+        {
+            int months = Convert.ToInt32(Math.Floor((double)ts.Days / 30));
+            return months <= 1 ? "Hace un mes" : "Hace " + months + " meses";
+        }
+        else
+        {
+            int years = Convert.ToInt32(Math.Floor((double)ts.Days / 365));
+            return years <= 1 ? "Hace un año" : "hace" + years + " años";
+        }
+
+    }
+
+}
+<style>
+    #page-wrapper {
+        padding: 0;
+    }
+</style>
+<br />
+<br />
+<br />
+<section style="height:100%;">
+    @foreach (var objPublicacion in lstObjPublicacion)
+    {
+        <text>
+            <div class="container post publicacionContenedor" data-idpublicacion="@objPublicacion.IntIdPublicacion">
+                <div class="row header">
+                    <div class="col-2">
+                        <img class="rounded-circle" src="@VariableGlobal.StrUrlSitio/Views/Publicacion/PublicacionImagen/@objPublicacion.StrImagen" alt="">
+                    </div>
+                    <div class="col-10">
+                        <p class="title">@(objPublicacion.StrCveComprador)</p>
+                        <p class="subTitle">@(ObtenerTiempoHace(objPublicacion.DtFechaAlta) + " en " + objPublicacion.StrDescEstado)</p>
+                    </div>
+                </div>
+                <div class="row post-img">
+                    <img class="rounded mx-auto imgCropped" src="@VariableGlobal.StrUrlSitio/Views/Publicacion/PublicacionImagen/@objPublicacion.StrNombreArchivo" alt="">
+                </div>
+                <div class="row body" style="max-height: 50px !important">
+                    <div class="col-9">
+                        <p style="cursor:pointer" class="productName"><a href="@VariableGlobal.StrUrlSitio/Views/Publicacion/publicacionDetalle.cshtml?idPublicacion=@objPublicacion.IntIdPublicacion">@objPublicacion.StrDescCategoria</a></p>
+                        <p class="productDesc">@objPublicacion.StrDescripcion</p>
+                    </div>
+                    <div class="col-2">
+                        <p class="productName">@objPublicacion.DecPresupuesto.ToString("###,###.##")</p>
+                    </div>
+                </div>
+                <div class="row footer">
+                    <div class="col">
+                        @if (objPublicacion.IntIdMegusta == 0)
+                        {
+                            <a href="" class="btn_Favorito" data-idpublicacion="@objPublicacion.IntIdPublicacion"><i class="material-icons md-36 btnFavoritoIcono" id="btnFavoritoIcono_@objPublicacion.IntIdPublicacion">favorite_border</i></a>
+                        }
+                        else
+                        {
+                            <a href="" class="btn_Favorito" data-idpublicacion="@objPublicacion.IntIdPublicacion"><i class="material-icons md-36 btnFavoritoIcono" id="btnFavoritoIcono_@objPublicacion.IntIdPublicacion" style="color: red !important">favorite</i></a>
+                        }
+                        @*<a href="@VariableGlobal.StrUrlSitio/Views/Publicacion/publicacionDetalle.cshtml?idPublicacion=@objPublicacion.IntIdPublicacion"><i class="material-icons md-36">info_outline</i></a>*@
+                        @if (objPublicacion.IntIdUsuario == VariableGlobal.SessionIntIdUsuario)
+                        {
+                            <a id="btn_EliminaPublicacion" class="btn_EliminaPublicacion" href="#"><i class="material-icons md-36">delete_outline</i></a>
+                        }
+
+                    </div>
+                </div>
+            </div>
+        </text>
+    }
+    <br />
+    <br />
+</section>
+<style>
+    .imgCropped {
+        object-fit: cover;
+    }
+</style>
+<script>
+
+    $(document).ready(function () {
+        // global vars
+        //var winWidth = $(window).width();
+        var winHeight = $(window).height();
+        //var int_NavbarStaticSide = $(".navbar-static-side").width();
+
+        // set initial div height / width
+        $('.imagen-trac').css({
+            //'width': (winWidth - int_NavbarStaticSide),
+            'height': winHeight,
+        });
+
+        // make sure div stays full width/height on resize
+        $(window).resize(function () {
+            //int_NavbarStaticSide = $(".navbar-static-side").width();
+            $('.imagen-trac').css({
+                //'width': (winWidth - int_NavbarStaticSide),
+                'height': winHeight,
+            });
+        });
+
+        $(".btn_Favorito").click(function (event) {
+            event.preventDefault();
+            var int_idPublicacion = $(this).data("idpublicacion");
+            fn_EnviarLike(int_idPublicacion);
+        });
+
+        $(".btn_EliminaPublicacion").click(function (event) {
+            event.preventDefault();
+            var objPublicacion = $(this).closest(".publicacionContenedor");
+            var int_idPublicacion = $(objPublicacion).data("idpublicacion");
+
+            swal({//metodo para el mensage de confirm
+            title: "",
+            text: "Desea eliminar esta publicación?? ",
+            type: "warning",//tipo de mensage =>  opciones: warning, error, info y success
+            showCancelButton: true,//mostrar boton de cancelacion
+            confirmButtonColor: hex_str_ColorBotonConfirmar,//color de boton de confirmacion
+            confirmButtonText: "Eliminar",//texto en el boton de confirmacion
+            cancelButtonText: "Cerrar",//texto en el boton de cancelacion
+            closeOnConfirm: true,//la ventana de cerrara al momento de seleccionar la opcion de confirmacion
+            closeOnCancel: true,//la ventana de cerrara al momento de seleccionar la opcion de cancelacion
+            },
+            function (isConfirm) {
+                if (isConfirm) {
+                    fn_EliminarPublicacion(int_idPublicacion, objPublicacion);
+                }
+            });
+        });
+
+        $("#btn_Contactar").click(function () {
+            let int_IdLiquidacion = $(this).data("idpublicacion");
+            fn_AbriModalChat(int_IdLiquidacion);
+        });
+    });
+
+    function fn_AbriModalChat(param_Int_IdLiquidacion) {
+        $.pgwModal({//abre ABC not
+            url: "@VariableGlobal.StrUrlSitio/Views/Chat/chat.cshtml?Popup=1&IdPublicacion=" + param_Int_IdLiquidacion,
+            loadingContent: '<span style="text-align:center">Cargando</span>',
+            closeOnBackgroundClick: false,
+            title: "Contactar",
+            maxWidth: '95%'
+        });
+    }
+
+    function fn_EnviarLike(int_idPublicacion) {
+        //Mandamos los datos al webmethod para guardar los datos
+        //declaramos el objeto que se le pasara al controlador
+        var obj_MeGusta = {
+            IntIdPublicacion: int_idPublicacion
+        }
+
+        var str_Metodo = "";
+        var str_Url = "";
+        str_Metodo = "POST";
+        str_Url = "@VariableGlobal.StrUrlApi/MeGusta/Post/0/";
+
+        $.ajax({
+            url: str_Url,
+            data: JSON.stringify(obj_MeGusta),
+            type: str_Metodo,
+            async: false,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            global: false,
+            success: function (obj_Datos) {
+                //Se manda el mensaje de exito
+                if (obj_Datos["IntError"] == 1) {
+                    toastr[obj_Datos["StrTipoError"]](obj_Datos["StrMensajeError"]);
+                } else {
+                    if (obj_Datos["IntIdRespuesta"] == 1) {
+                        $("#btnFavoritoIcono_" + int_idPublicacion).html("favorite");
+                        $("#btnFavoritoIcono_" + int_idPublicacion).attr("style", "color: red");
+                    } else {
+                        $("#btnFavoritoIcono_" + int_idPublicacion).html("favorite_border");
+                        $("#btnFavoritoIcono_" + int_idPublicacion).attr("style", "");
+                    }
+                }
+            }
+        });
+    }
+
+    function fn_EliminarPublicacion(int_idPublicacion, objPublicacion) {
+        //Mandamos los datos al webmethod para guardar los datos
+        //declaramos el objeto que se le pasara al controlador
+        var obj_Publicacion = {
+            IntIdPublicacion: int_idPublicacion
+        }
+
+        var str_Metodo = "";
+        var str_Url = "";
+        str_Metodo = "POST";
+        str_Url = "@VariableGlobal.StrUrlApi/PublicacionAccion/EliminaPublicacion/";
+
+        $.ajax({
+            url: str_Url,
+            data: JSON.stringify(obj_Publicacion),
+            type: str_Metodo,
+            async: false,
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            global: false,
+            success: function (obj_Datos) {
+                toastr[obj_Datos["StrTipoError"]](obj_Datos["StrMensajeError"]);
+                if (obj_Datos["IntError"] == 0) {
+                    $(objPublicacion).remove();
+                }
+            }
+        });
+    }
+
+
+
+
+</script>
+

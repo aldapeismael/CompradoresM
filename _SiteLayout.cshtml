@@ -1,0 +1,380 @@
+﻿@{
+
+    int IntIdRobot = int.Parse(Request.QueryString["IntIdRobot"]?.ToString() ?? "0");   //GEG
+    int IntBMenu = int.Parse(Request.QueryString["bMenu"]?.ToString() ?? "1");   //GEG
+    int IntBCargaFooter = int.Parse(Request.QueryString["bCargaFooter"]?.ToString() ?? "1");   //GEG
+    string pStrCveBusquedaCadena = Encriptado.EncriptarDatos("pCveBusqueda");
+
+    if (IntBMenu == 1)
+    {
+        IntBMenu = int.Parse(Request.Form["bMenu"]?.ToString() ?? "1");
+    }
+
+    ObjetoBusqueda objetoBusqueda = new ObjetoBusqueda();
+    objetoBusqueda.IntEjecuta = 0;
+    var lstObjCategoria = new Categoria().ObtenerListaGenerica(objetoBusqueda);
+
+    if (IntIdRobot == 0)     //GEG
+    {
+
+        if (!VariableGlobal.SessionBoolActivo ||
+    VariableGlobal.SessionStrTipoMenu == "" ||
+    (VariableGlobal.SessionStrTipoMenu != "ejecutivo" && VariableGlobal.SessionStrTipoMenu != "operativo"))//si no existe la sesion entonces retornamos a login
+        {
+            Response.Redirect("~/Acceso.cshtml");
+        }
+    }       //GEG
+    else
+    {
+        var objRobot = new AccesoController().Robot(); //GEG
+    }
+
+    string Strurl = Request.RawUrl;
+    bool StrUrlDefault = Strurl.Contains("Default.cshtml");
+    //var int_Robot = VariableGlobal.SessionIntBRobot;
+    var int_Robot = (IntIdRobot > 0 ? 1 : VariableGlobal.SessionIntBRobot);     // GEG
+
+    // Comienza petición de acciones para la pagina
+    var objAccesoPagina = new PaginaMenuController().Get((int_Robot == 1 ? 2 : 1), Strurl);
+    if (int_Robot != 1 && objAccesoPagina.Content.IntIdPagina == 0 && !StrUrlDefault)     // Si la respuesta de IntIdPagina == 0, el usuario no tiene permiso
+    {
+        //Response.Redirect("~/Views/Default/Default.cshtml");
+        //Response.Redirect(Request.UrlReferrer.OriginalString);
+        Response.Redirect("~/Views/Aplicacion/Acceso/SinAcceso.cshtml?Url=" + Strurl);
+    }// Si la ruta o pagina no fue encontrada en los SPs, lo retornamos a Default (es diferente al error 404)
+    else if (int_Robot != 1 && objAccesoPagina.Content.IntIdPagina == -1 && !StrUrlDefault)
+    {
+        Response.Redirect("~/Views/Default/Default.cshtml");
+    }
+
+
+    int IntEjecuta = 0;
+
+    if (@VariableGlobal.SessionIntBRobot == 1)
+    {
+        IntEjecuta = 2;
+    }
+    else
+    {
+        IntEjecuta = 3;
+    }
+    var obj_LtsMenu = new List<Menu>();
+    string strJsonConfiguracionNotificacion = "[]";
+    //if (VariableGlobal.SessionStrTipoMenu == "ejecutivo")
+    //{
+    //    obj_LtsMenu = new MenuController().ObtenerMenu(@VariableGlobal.SessionIntIdPerfil.ToString(), IntEjecuta);
+    //}
+
+    //int IntIdMultiListaMonedaUsd = new MultiListaController().ObtenerListaChar(8, 0, "MONEDA", "USD").First().idMultiLista;
+
+    Parametro objParametro = new Parametro();
+    objParametro.IntTipoBusqueda = 1;
+    objParametro.StrCveParametro = "notificacion_configuracionJson";
+    objParametro.ObtenerPorClaveParametro();
+    if (objParametro != null)
+    {
+        strJsonConfiguracionNotificacion = objParametro.StrValor1char;
+    }
+
+    //SE TOMA EL PERIODO CONTABLE ACTUAL EN corporativo.empresa
+    //int int_PeriodoContable = int.Parse(new PeriodoContabilidadController().ObtenerLista(3, 0).First().periodo.ToString());
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        input, input:before, input:after {
+            -webkit-user-select: initial;
+            -khtml-user-select: initial;
+            -moz-user-select: initial;
+            -ms-user-select: initial;
+            user-select: initial;
+        }
+    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="@VariableGlobal.StrUrlSitio/css/general.css">
+    <link rel="stylesheet" href="@VariableGlobal.StrUrlSitio/css/home.css">
+
+
+
+    <link rel="stylesheet" href="@VariableGlobal.StrUrlSitio/css/bootstrap.min.css">
+    <!-- Muestra una pantalla de loading mientras procesamos algo -->
+    <link href="@VariableGlobal.StrUrlSitio/css/sip/jquery.loading.min.css" rel="stylesheet" />
+
+    <script src="@VariableGlobal.StrUrlSitio/Scripts/jquery-2.1.1.js"></script>
+    <script src="@VariableGlobal.StrUrlSitio/Scripts/bootstrap.min.js"></script>
+
+    <link href="@VariableGlobal.StrUrlSitio/Scripts/plugins/dataTables/datatables.min.css" rel="stylesheet">
+    <link href="@VariableGlobal.StrUrlSitio/Scripts/plugins/dataTables/FixedHeader-3.1.3/fixedHeader.bootstrap.min.css" rel="stylesheet">
+
+    <!-- JavaScript Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW"
+            crossorigin="anonymous"></script>
+    <!-- CSS only -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1"
+          crossorigin="anonymous">
+    <!-- FONTS only -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons"
+          rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@100;400;500;600;900&display=swap"
+          rel="stylesheet">
+    <title>Compradores México</title>
+
+    <script src="@VariableGlobal.StrUrlSitio/Scripts/plugins/dataTables/datatables.min.js"></script>
+    <script src="@VariableGlobal.StrUrlSitio/Scripts/plugins/dataTables/visible/buttons.colVis.min.js"></script>
+    <script src="@VariableGlobal.StrUrlSitio/Scripts/plugins/dataTables/FixedHeader-3.1.3/dataTables.fixedHeader.min.js"></script>
+    <!-- Muestra una pantalla de loading mientras procesamos algo -->
+    <!-- Estilos de bootstrap -->
+    @*<link href="@VariableGlobal.StrUrlSitio/css/bootstrap.min.css" rel="stylesheet">*@
+    <!-- Estilos de awesome - Se encarga de generar los iconos del sitio web -->
+    <link href="@VariableGlobal.StrUrlSitio/font-awesome/css/font-awesome.css" rel="stylesheet">
+    <!-- Animate - Genera las animaciones del sitio cuando se colocan las propias clases de animaciones -->
+    @*<link href="@VariableGlobal.StrUrlSitio/css/animate.css" rel="stylesheet">*@
+
+    <!-- Estilos de Datatable - PLugin para controlar las tablas dinámicas -->
+    <link href="@VariableGlobal.StrUrlSitio/Scripts/plugins/dataTables/datatables.min.css" rel="stylesheet">
+    @*<link href="@VariableGlobal.StrUrlSitio/Scripts/plugins/dataTables/FixedHeader-3.1.3/fixedHeader.bootstrap.min.css" rel="stylesheet">*@
+
+    <!-- Estilos de DatePicke - Para el seleccionado de las fechas en un input date -->
+    <link href="@VariableGlobal.StrUrlSitio/css/plugins/datapicker/datepicker3.css" rel="stylesheet">
+
+
+    <!-- Sweet Alert - Estilos para las alertas en forma de modal con acciones-->
+    <link href="@VariableGlobal.StrUrlSitio/css/plugins/sweetalert/sweetalert.css" rel="stylesheet">
+
+    <!-- PGW Modal - Modales dinámicos -->
+    <link href="@VariableGlobal.StrUrlSitio/Scripts/plugins/PgwModal/pgwmodal.min.css" rel="stylesheet">
+
+    <!-- Toast - Mensajes flotantes -->
+    <link href="@VariableGlobal.StrUrlSitio/Scripts/plugins/toastr/toastr.min.css" rel="stylesheet" />
+
+    <!-- Muestra una pantalla de loading mientras procesamos algo -->
+    <!-- TouchSpinner - Plugin para validar los campos de tipos numericos -->
+    <link href="@VariableGlobal.StrUrlSitio/css/plugins/touchspin/jquery.bootstrap-touchspin.min.css" rel="stylesheet">
+
+    <!------------------------------------------->
+    <!-- Declaracion de librerias de Javascript  -->
+    <!------------------------------------------->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.3.2/jspdf.min.js"></script>
+
+    @*<script src="@VariableGlobal.StrUrlSitio/Scripts/plugins/dataTables/FixedHeader-3.1.3/dataTables.fixedHeader.min.js"></script>*@
+
+    <!-- Libreria para el seleccionador de fechas en los filtros  -->
+    <script src="@VariableGlobal.StrUrlSitio/Scripts/plugins/datapicker/bootstrap-datepicker.js"></script>
+
+    <!-- Sweet alert - Alertas en forma de modal con acciones -->
+    <script src="@VariableGlobal.StrUrlSitio/Scripts/plugins/sweetalert/sweetalert.min.js"></script>
+
+
+    <script src="@VariableGlobal.StrUrlSitio/Scripts/plugins/PgwModal/pgwmodal.js"></script>
+
+    <!-- Mensajes de alertas del sistema -->
+    <script src="@VariableGlobal.StrUrlSitio/Scripts/plugins/toastr/toastr.min.js"></script>
+
+    <!-- Pantallas de loading -->
+    <script src="@VariableGlobal.StrUrlSitio/Scripts/jquery.loading.min.js"></script>
+
+    <!-- TouchSpinner - Plugin para validar los campos de tipos numericos -->
+    <script src="@VariableGlobal.StrUrlSitio/Scripts/plugins/touchspin/jquery.bootstrap-touchspin.min.js"></script>
+
+    <!-- Utilerias desarrolladas por el equipo de SIP 2020 - Siempre deben de ir al final -->
+    <script src="@VariableGlobal.StrUrlSitio/Scripts/utileria.js?id=@Guid.NewGuid()"></script><!---carga de script custom para la configuraciones globales --->
+</head>
+
+<body class='skin-3 fixed-sidebar fixed-nav fixed-nav-basic'>
+
+
+
+    @*<div id="wrapper" style="@(IntBMenu == 1 ? "" : "margin-top:0;")">
+        <div id="page-wrapper" class="gray-bg">*@
+    <header>
+        <nav class="navbar fixed-top">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-2" id="menu">
+                        <a class="navbar-brand" href="#">
+                            @*<i class="material-icons md-48">account_circle</i>*@
+                            <img class="" style="border-radius: 50%; width: 45px; height: 45px" src="@VariableGlobal.StrUrlSitio/Views/Publicacion/PublicacionImagen/@VariableGlobal.SessionStrImagenPerfil" alt="">
+                        </a>
+                    </div>
+                    <div class="col-8">
+                        <a href="@VariableGlobal.StrUrlSitio/Views/Default/Default.cshtml" style="text-decoration: none;"><img width="100px" class="" src="@VariableGlobal.StrUrlSitio/img/logo.png" alt=""></a>
+                    </div>
+                    <div class="col-2" id="menuSerch">
+                        <a>
+                            <i class="material-icons md-48">search</i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <div class="menuUser" id="menuUser">
+            @*<div><a href="#">Pefil</a></div>*@
+            @if (VariableGlobal.SessionIntTipoUsuario == 2)
+            {
+                <div><a href="@VariableGlobal.StrUrlSitio/Views/MeGusta/misMeGusta.cshtml">Mis Me Gusta</a></div>
+            }
+            <div><a href="@VariableGlobal.StrUrlSitio/Views/Chat/misChat.cshtml">Mis Chats</a></div>
+            <div><a href="@VariableGlobal.StrUrlSitio/Views/MiPerfil/tipoUsuario.cshtml">Cambiar a @(VariableGlobal.SessionIntTipoUsuario == 2?"Comprador":"Vendedor")</a></div>
+            <div><a href="@VariableGlobal.StrUrlSitio/Views/MiPerfil/miPerfil.cshtml">Mi Perfil</a></div>
+            <div style="border-bottom: none;"><a id="btn_Salir" href="@VariableGlobal.StrUrlSitio/Acceso.cshtml" style="color: rgb(179, 40, 40);" href="#">Salir</a></div>
+        </div>
+        <div class="menuSerchAd" id="menuSerchAd">
+            <div class="containerForm">
+                <div class="containerNav">
+                    <h2>Busqueda</h2>
+                    <div id="menuSerchClose">
+                        <i class="material-icons md-48">clear</i>
+                    </div>
+                </div>
+                <hr>
+                <div class="form-group">
+                    <label for="exampleFormControlInput1">Busca Compradores por categoria</label>
+                    <select class="form-control" id="idCategoriaLayout">
+                        <option value="0">Todo</option>
+                        @foreach (var item in lstObjCategoria)
+                        {
+                            <option value="@item.IntIdCategoria">@item.StrDescCategoria</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <div>
+                        <label for="exampleFormControlInput1">Busca anuncios por palabra</label>&nbsp;<span style="font-size:9px">(Escribe todas la palabras claves que hagan referencia a lo que vendes)</span>
+                    </div>
+                    <input type="text" class="form-control"
+                           id="cvePalabraClaveLayout"
+                           placeholder="Busqueda por palabra clave">
+                </div>
+                <div class="form-group">
+                    <label for="exampleFormControlSelect2">Busca Compradores segun su estado</label>
+                    <select multiple class="form-control"
+                            id="ddl_EstadoMultiple">
+                        <option value="1">Nuevo Le&oacute;n</option>
+                        <option value="2">Coahuila</option>
+                        <option value="3">Ciudad de M&eacute;xico</option>
+                        <option value="4">Aguascalientes</option>
+                        <option value="5">Baja California</option>
+                        <option value="6">Baja California Sur</option>
+                        <option value="7">Campeche</option>
+                        <option value="8">Chiapas</option>
+                        <option value="9">Chihuahua</option>
+                        <option value="10">Colima</option>
+                        <option value="11">Durango</option>
+                        <option value="12">Estado de M&eacute;xico</option>
+                        <option value="13">Guanajuato</option>
+                        <option value="14">Guerrero</option>
+                        <option value="15">Hidalgo</option>
+                        <option value="16">Jalisco</option>
+                        <option value="17">Michoac&aacute;n</option>
+                        <option value="18">Morelos</option>
+                        <option value="19">Nayarit</option>
+                        <option value="20">Oaxaca</option>
+                        <option value="21">Puebla</option>
+                        <option value="22">Quer&eacute;taro</option>
+                        <option value="23">Quintana Roo</option>
+                        <option value="24">San Luis Potos&iacute;</option>
+                        <option value="25">Sinaloa</option>
+                        <option value="26">Sonora</option>
+                        <option value="27">Tabasco</option>
+                        <option value="28">Tamaulipas</option>
+                        <option value="29">Tlaxcala</option>
+                        <option value="30">Veracruz</option>
+                        <option value="31">Yucat&aacute;n</option>
+                        <option value="32">Zacatecas</option>
+                    </select>
+                </div>
+                <br />
+                <div class="containerNavFooter">
+                    <button type="button" id="btn_BusquedaLayout" class="btn btn-primary btn_BusquedaLayout">Buscar</button>
+                    @*<a href="">Busqueda avanzada</a>*@
+                </div>
+            </div>
+        </div>
+    </header>
+
+    @RenderBody()
+    <!--- Div para pintar el footer estático del sitio SIP 2020 --->
+    @if (IntBCargaFooter == 1)
+    {
+        <footer>
+            <nav class="navbar fixed-bottom" style="margin-bottom:0px !important">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-4">
+                            <a class="navbar-brand" href="@VariableGlobal.StrUrlSitio/Views/Default/Default.cshtml">
+                                <i class="material-icons md-48">home</i>
+                            </a>
+                        </div>
+                        @if (VariableGlobal.SessionIntTipoUsuario != 2)
+                        {
+                            <div class="col-4">
+                                <a href="@VariableGlobal.StrUrlSitio/Views/Publicacion/publicacionAlta.cshtml">
+                                    <i class="material-icons md-48">add_circle</i>
+                                </a>
+                            </div>
+                        }
+                        <div class="col-4">
+                            <a href="@VariableGlobal.StrUrlSitio/Views/Chat/misChat.cshtml">
+                                <i class="material-icons md-48">chat_bubble_outline</i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </footer>
+    }
+    </div><!--- fin contenido--->
+    </div>
+
+    <script type="text/javascript">
+
+    tipo_menu = '@VariableGlobal.SessionStrTipoMenu';
+    var str_RutaActual = '@Strurl';
+
+    var esMovil = {
+        Android: function () {
+            return navigator.userAgent.match(/Android/i);
+        },
+        BlackBerry: function () {
+            return navigator.userAgent.match(/BlackBerry/i);
+        },
+        iOS: function () {
+            return navigator.userAgent.match(/iPhone|iPad|iPod/i);
+        },
+        Opera: function () {
+            return navigator.userAgent.match(/Opera Mini/i);
+        },
+        Windows: function () {
+            return navigator.userAgent.match(/IEMobile/i) || navigator.userAgent.match(/WPDesktop/i);
+        },
+        any: function () {
+            return (esMovil.Android() || esMovil.BlackBerry() || esMovil.iOS() || esMovil.Opera() || esMovil.Windows());
+        }
+        };
+
+
+    $(".btn_BusquedaLayout").click(function (event) {
+        event.preventDefault();
+        var strEstados = "";
+        var objEstados = $("#ddl_EstadoMultiple").val();
+        if (objEstados != null) {
+            for (var i = 0; i < objEstados.length; i++) {
+                strEstados += objEstados[i] + "|";
+            }
+        }
+        strEstados = strEstados.slice(0,-1);
+        location.href = '@VariableGlobal.StrUrlSitio/Views/Default/Default.cshtml?pIdCategoria=' + $("#idCategoriaLayout").val() + '&pCveBusqueda=' + $("#cvePalabraClaveLayout").val() + '&pEstados=' + strEstados;
+    });
+
+    </script>
+    <script src="@VariableGlobal.StrUrlSitio/js/functions.js"></script>
+</body>
+</html>
+
+
